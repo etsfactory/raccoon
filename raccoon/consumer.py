@@ -140,7 +140,7 @@ class Consumer(threading.Thread):
                     channel.queue_bind(exchange=self.dle, queue=tmp_queue_name, routing_key=self.routing_key)
                     queue_args = {'x-dead-letter-exchange': self.dle}
 
-                channel.exchange_declare(exchange=self.exchange, durable=True, type=self.exchange_type)
+                channel.exchange_declare(exchange=self.exchange, durable=True, exchange_type=self.exchange_type)
                 self.ch = channel
 
                 result = channel.queue_declare(queue=self.rabbit_queue_name, durable=True, arguments=queue_args)
