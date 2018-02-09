@@ -31,7 +31,7 @@ class Publisher(object):
                 time.sleep(10)
                 tries += 1
         self.channel = connection_out.channel()
-        self.channel.exchange_declare(exchange=self.exchange, type=self.exchange_type, durable=True)
+        self.channel.exchange_declare(exchange=self.exchange, exchange_type=self.exchange_type, durable=True)
         return self
 
     def __exit__(self, type, value, traceback):

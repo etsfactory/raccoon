@@ -134,7 +134,7 @@ class Consumer(threading.Thread):
                 queue_args = None
                 if self.dle:
                     # Declara el Dead letter exchange
-                    channel.exchange_declare(exchange=self.dle, durable=True, type=self.exchange_type)
+                    channel.exchange_declare(exchange=self.dle, durable=True, exchange_type=self.exchange_type)
                     result = channel.queue_declare(queue=self.dle_queue, durable=True, arguments=queue_args)
                     tmp_queue_name = result.method.queue
                     channel.queue_bind(exchange=self.dle, queue=tmp_queue_name, routing_key=self.routing_key)
