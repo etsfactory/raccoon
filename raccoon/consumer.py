@@ -83,7 +83,8 @@ class Consumer(threading.Thread):
         return res.method.message_count == 0
 
     def __init__(self, process_function, host, user, password, exchange, rabbit_queue_name, error_queue,
-                 prefetch_count=1, exchange_type='fanout', retry_wait_time=1, routing_key=None, dle=None, dle_queue=None):
+                 prefetch_count=1, exchange_type='fanout', retry_wait_time=1, routing_key=None, dle=None,
+                 dle_queue=None, dle_routing_key=None):
         """
         :param process_function: Funcion que procesara los datos recibidos
         :param host: Direccion del rabbit
@@ -98,6 +99,7 @@ class Consumer(threading.Thread):
         :param routing_key: Clave de la que escuchar
         :param dle: Nombre del exchange al que enviar los mensajes en caso de error
         :param dle_queue: Nombre de la cola conectada al exchange de dle
+        :param dle_routing_key: Clave de enrutado para la cola dle
         """
         super().__init__()
 
@@ -114,6 +116,7 @@ class Consumer(threading.Thread):
         self.routing_key = routing_key
         self.dle = dle
         self.dle_queue = dle_queue
+        self.dle_routing_key = dle_routing_key
 
         self.count = 0
         self.number_of_messages = 0
@@ -137,7 +140,7 @@ class Consumer(threading.Thread):
                     channel.exchange_declare(exchange=self.dle, durable=True, exchange_type=self.exchange_type)
                     result = channel.queue_declare(queue=self.dle_queue, durable=True, arguments=queue_args)
                     tmp_queue_name = result.method.queue
-                    channel.queue_bind(exchange=self.dle, queue=tmp_queue_name, routing_key=self.routing_key)
+                    channel.queue_bind(exchange=self.dle, queue=tmp_queue_name, routing_key=self.dle_routing_key)
                     queue_args = {'x-dead-letter-exchange': self.dle}
 
                 channel.exchange_declare(exchange=self.exchange, durable=True, exchange_type=self.exchange_type)
@@ -145,7 +148,6 @@ class Consumer(threading.Thread):
 
                 result = channel.queue_declare(queue=self.rabbit_queue_name, durable=True, arguments=queue_args)
                 queue_name = result.method.queue
-
 
                 channel.queue_bind(exchange=self.exchange, queue=queue_name, routing_key=self.routing_key)
 
