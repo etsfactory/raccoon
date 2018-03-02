@@ -142,6 +142,8 @@ class Consumer(threading.Thread):
                     tmp_queue_name = result.method.queue
                     channel.queue_bind(exchange=self.dle, queue=tmp_queue_name, routing_key=self.dle_routing_key)
                     queue_args = {'x-dead-letter-exchange': self.dle}
+                    if self.dle_routing_key is not None:
+                        queue_args['x-dead-letter-routing-key'] = self.dle_routing_key
 
                 channel.exchange_declare(exchange=self.exchange, durable=True, exchange_type=self.exchange_type)
                 self.ch = channel
