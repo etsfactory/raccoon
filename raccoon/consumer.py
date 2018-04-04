@@ -122,12 +122,14 @@ class Consumer(threading.Thread):
         self.number_of_messages = 0
         self.messages = []
 
+        self._stopped = False
 
         # Se procesa la mitad de los objetos obtenidos si prefetch_count es distinto de 1
         self.batch_processing_size = 1 if prefetch_count == 1 else (prefetch_count // 2)
 
     def run(self):
         retries = 0
+        self._stopped = False
         while True:
             try:
                 credentials = pika.PlainCredentials(self.user, self.password)
@@ -180,3 +182,7 @@ class Consumer(threading.Thread):
             finally:
                 retries += 1
                 time.sleep(self.retry_wait_time)
+
+    def stop(self):
+        self._stopped = True
+        self.ch.stop_consuming()
