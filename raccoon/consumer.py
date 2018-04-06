@@ -135,7 +135,6 @@ class Consumer(threading.Thread):
                 credentials = pika.PlainCredentials(self.user, self.password)
                 connection = pika.BlockingConnection(pika.ConnectionParameters(self.host, credentials=credentials))
                 channel = connection.channel()
-                self.conn = connection
 
                 queue_args = None
                 if self.dle:
@@ -192,9 +191,5 @@ class Consumer(threading.Thread):
             pass
         try:
             self.ch.close()
-        except:
-            pass
-        try:
-            self.conn.close()
         except:
             pass
