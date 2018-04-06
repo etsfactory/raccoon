@@ -186,4 +186,11 @@ class Consumer(threading.Thread):
 
     def stop(self):
         self._stopped = True
-        self.ch.stop_consuming()
+        try:
+            self.ch.stop_consuming()
+        except:
+            pass
+        try:
+            self.ch.close()
+        except:
+            pass
