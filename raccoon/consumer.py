@@ -130,11 +130,12 @@ class Consumer(threading.Thread):
     def run(self):
         retries = 0
         self._stopped = False
-        while True:
+        while not self._stopped:
             try:
                 credentials = pika.PlainCredentials(self.user, self.password)
                 connection = pika.BlockingConnection(pika.ConnectionParameters(self.host, credentials=credentials))
                 channel = connection.channel()
+                self.conn = connection
 
                 queue_args = None
                 if self.dle:
