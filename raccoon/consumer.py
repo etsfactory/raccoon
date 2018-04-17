@@ -48,7 +48,13 @@ class Consumer(threading.Thread):
                     data_to_process = data
                 self.messages = []
                 self.process_function(data_to_process)
-
+                result = self.process_function(data_to_process)
+                if self.reply:
+                    st.logger.debug('Sending reply n %s to %s.', properties.correlation_id, properties.reply_to)
+                    ch.basic_publish(exchange='',
+                                     routing_key=properties.reply_to,
+                                     properties=pika.BasicProperties(correlation_id=properties.correlation_id),
+                                     body=ujson.dumps(result))
             else:
                 # Se almacena el mensaje para su posterior procesado
                 self.messages.append(data)
@@ -84,7 +90,7 @@ class Consumer(threading.Thread):
 
     def __init__(self, process_function, host, user, password, exchange, rabbit_queue_name, error_queue,
                  prefetch_count=1, exchange_type='fanout', retry_wait_time=1, routing_key=None, dle=None,
-                 dle_queue=None, dle_routing_key=None):
+                 dle_queue=None, dle_routing_key=None, reply_origin=False):
         """
         :param process_function: Funcion que procesara los datos recibidos
         :param host: Direccion del rabbit
@@ -100,6 +106,7 @@ class Consumer(threading.Thread):
         :param dle: Nombre del exchange al que enviar los mensajes en caso de error
         :param dle_queue: Nombre de la cola conectada al exchange de dle
         :param dle_routing_key: Clave de enrutado para la cola dle
+        :param reply_origin: If True, sends de result to the original queue using the reply_to prop of the request
         """
         super().__init__()
 
@@ -117,6 +124,7 @@ class Consumer(threading.Thread):
         self.dle = dle
         self.dle_queue = dle_queue
         self.dle_routing_key = dle_routing_key
+        self.reply = reply_origin
 
         self.count = 0
         self.number_of_messages = 0
