@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='raccoon',
-    version='1.2.2',
+    version='1.2.3',
     description='Library that is a wrapper over pika, a python library that interacts with rabbitmq ',
     author='ETS',
     packages=find_packages(exclude=['tests', 'docs']),
