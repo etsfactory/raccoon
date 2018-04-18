@@ -47,7 +47,6 @@ class Consumer(threading.Thread):
                 else:
                     data_to_process = data
                 self.messages = []
-                self.process_function(data_to_process)
                 result = self.process_function(data_to_process)
                 if self.reply:
                     ch.basic_publish(exchange='',
