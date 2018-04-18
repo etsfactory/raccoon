@@ -50,7 +50,6 @@ class Consumer(threading.Thread):
                 self.process_function(data_to_process)
                 result = self.process_function(data_to_process)
                 if self.reply:
-                    st.logger.debug('Sending reply n %s to %s.', properties.correlation_id, properties.reply_to)
                     ch.basic_publish(exchange='',
                                      routing_key=properties.reply_to,
                                      properties=pika.BasicProperties(correlation_id=properties.correlation_id),
