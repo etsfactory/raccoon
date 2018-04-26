@@ -88,7 +88,7 @@ class Consumer(threading.Thread):
 
     def __init__(self, process_function, host, user, password, exchange, rabbit_queue_name, error_queue,
                  prefetch_count=1, exchange_type='fanout', retry_wait_time=1, routing_key=None, dle=None,
-                 dle_queue=None, dle_routing_key=None, reply_origin=False):
+                 dle_queue=None, dle_routing_key=None, reply_origin=False, retries_to_error=3):
         """
         :param process_function: Funcion que procesara los datos recibidos
         :param host: Direccion del rabbit
@@ -99,12 +99,13 @@ class Consumer(threading.Thread):
         :param error_queue: Cola para escribir los mensajes de error
         :param prefetch_count: Número de mensajes a leer de rabbit
         :param exchange_type: Typo de exchange a definir
-        :param retry_wait_time: Número de reintentos de conexión con rabbit
+        :param retry_wait_time: Segundos de espera para el siguiente reintento de conexión con rabbit
         :param routing_key: Clave de la que escuchar
         :param dle: Nombre del exchange al que enviar los mensajes en caso de error
         :param dle_queue: Nombre de la cola conectada al exchange de dle
         :param dle_routing_key: Clave de enrutado para la cola dle
         :param reply_origin: If True, sends de result to the original queue using the reply_to prop of the request
+        :param retries_to_error: Número de reintentos de conexión con rabbit antes de notificar el error
         """
         super().__init__()
 
@@ -123,6 +124,7 @@ class Consumer(threading.Thread):
         self.dle_queue = dle_queue
         self.dle_routing_key = dle_routing_key
         self.reply = reply_origin
+        self.retries_to_error = retries_to_error
 
         self.count = 0
         self.number_of_messages = 0
@@ -170,7 +172,7 @@ class Consumer(threading.Thread):
                 channel.start_consuming()
             except (ConnectionClosed, ConnectionErrorException) as e:
                 # Solo publica el primer error de conexion
-                if retries == 0:
+                if retries == self.retries_to_error:
                     exception = {
                         'error': e,
                         'trace': traceback.format_exc()
