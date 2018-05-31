@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='raccoon',
-    version='1.2.3',
+    version='1.2.4',
     description='Library that is a wrapper over pika, a python library that interacts with rabbitmq ',
     author='ETS',
     packages=find_packages(exclude=['tests', 'docs']),
@@ -16,7 +16,7 @@ setup(
     ],
     install_requires=[
           'numpydoc',  # necessary for Sphinx to understand Numpy-style docstrings
-          'pika==0.10.0',
+          'pika==0.11.2',
           'ujson==1.35',
       ],
     zip_safe=True
