@@ -88,7 +88,7 @@ class Consumer(threading.Thread):
 
     def __init__(self, process_function, host, user, password, exchange, rabbit_queue_name, error_queue,
                  prefetch_count=1, exchange_type='fanout', retry_wait_time=1, routing_key=None, dle=None,
-                 dle_queue=None, dle_routing_key=None, reply_origin=False, retries_to_error=3):
+                 dle_queue=None, dle_routing_key=None, reply_origin=False, retries_to_error=3, heartbeat=None):
         """
         :param process_function: Funcion que procesara los datos recibidos
         :param host: Direccion del rabbit
@@ -106,6 +106,7 @@ class Consumer(threading.Thread):
         :param dle_routing_key: Clave de enrutado para la cola dle
         :param reply_origin: If True, sends de result to the original queue using the reply_to prop of the request
         :param retries_to_error: Número de reintentos de conexión con rabbit antes de notificar el error
+        :param heartbeat: tiempo con el que se comprueba si está viva la conexión
         """
         super().__init__()
 
@@ -125,6 +126,7 @@ class Consumer(threading.Thread):
         self.dle_routing_key = dle_routing_key
         self.reply = reply_origin
         self.retries_to_error = retries_to_error
+        self.heartbeat = heartbeat
 
         self.count = 0
         self.number_of_messages = 0
@@ -141,7 +143,8 @@ class Consumer(threading.Thread):
         while not self._stopped:
             try:
                 credentials = pika.PlainCredentials(self.user, self.password)
-                connection = pika.BlockingConnection(pika.ConnectionParameters(self.host, credentials=credentials))
+                connection = pika.BlockingConnection(pika.ConnectionParameters(self.host, credentials=credentials,
+                                                                               heartbeat=self.heartbeat))
                 channel = connection.channel()
                 self.conn = connection
 
