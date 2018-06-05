@@ -67,7 +67,8 @@ class Consumer(threading.Thread):
             else:
                 # Se almacena el mensaje para su posterior procesado
                 self.messages.append(data)
-            ch.basic_ack(delivery_tag=method.delivery_tag)
+            # ch.basic_ack(delivery_tag=method.delivery_tag)
+            raise ConnectionClosed
 
         except ConnectionErrorException as e:
             try:
