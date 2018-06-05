@@ -75,7 +75,6 @@ class Consumer(threading.Thread):
                 raise ConnectionErrorException('NACK not delivered.')
             raise e
         except ConnectionClosed:
-            self.conn.sleep(5)
             self.reconnect()
         except Exception as e:
             exception = {
