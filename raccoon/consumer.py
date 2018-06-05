@@ -37,9 +37,6 @@ class Consumer(threading.Thread):
         closed. See the on_connection_closed method.
 
         """
-        # This is the old connection IOLoop instance, stop its ioloop
-        self.conn.ioloop.stop()
-
         # Create a new connection
         self.run()
 
