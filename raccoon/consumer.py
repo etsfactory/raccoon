@@ -32,6 +32,17 @@ class Consumer(threading.Thread):
                 or self.is_queue_empty()
                 or len(self.messages) >= self.batch_processing_size)
 
+    def reconnect(self):
+        """Will be invoked by the IOLoop timer if the connection is
+        closed. See the on_connection_closed method.
+
+        """
+        # This is the old connection IOLoop instance, stop its ioloop
+        self.conn.ioloop.stop()
+
+        # Create a new connection
+        self.run()
+
     def process_bus_data(self, ch, method, properties, body):
         """
         Obtiene el objeto del bus y lo procesa.
@@ -64,6 +75,8 @@ class Consumer(threading.Thread):
             except ConnectionClosed:
                 raise ConnectionErrorException('NACK not delivered.')
             raise e
+        except ConnectionClosed:
+            self.conn.add_timeout(5, self.reconnect)
         except Exception as e:
             exception = {
                 'error': e,
