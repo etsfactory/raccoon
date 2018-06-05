@@ -65,6 +65,7 @@ class Consumer(threading.Thread):
                 # Se almacena el mensaje para su posterior procesado
                 self.messages.append(data)
             # ch.basic_ack(delivery_tag=method.delivery_tag)
+            self.conn.close()
             raise ConnectionClosed
 
         except ConnectionErrorException as e:
@@ -74,7 +75,8 @@ class Consumer(threading.Thread):
                 raise ConnectionErrorException('NACK not delivered.')
             raise e
         except ConnectionClosed:
-            self.conn.add_timeout(5, self.reconnect)
+            self.conn.sleep(5)
+            self.reconnect()
         except Exception as e:
             exception = {
                 'error': e,
