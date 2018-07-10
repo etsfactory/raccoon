@@ -1,4 +1,6 @@
+from datetime import datetime
 import time
+
 import ujson
 
 import pika
@@ -7,7 +9,8 @@ from pika.exceptions import ConnectionClosed
 
 class Publisher(object):
 
-    def __init__(self, host, user, password, exchange, exchange_type='fanout', retry_wait_time=1, max_retries=1):
+    def __init__(self, host, user, password, exchange, exchange_type='fanout', retry_wait_time=1, max_retries=1,
+                 source_app=None):
         self.host = host
         self.user = user
         self.password = password
@@ -15,6 +18,7 @@ class Publisher(object):
         self.max_retries = max_retries
         self.retry_wait_time = retry_wait_time
         self.exchange_type = exchange_type
+        self.source_app = source_app
 
     def __enter__(self):
         tries = 0
@@ -43,6 +47,11 @@ class Publisher(object):
         finished = False
         if mandatory:
             self.channel.confirm_delivery()
+        # Añade metadatos al mensaje
+        metadata = {'CreationDate': datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+        if self.source_app is not None:
+            metadata['AppName'] = self.source_app
+        message['metadata'] = metadata
         while not finished:
             try:
                 return self.channel.basic_publish(exchange=self.exchange, routing_key=routing_key,
