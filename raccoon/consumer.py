@@ -49,7 +49,7 @@ class Consumer(threading.Thread):
 
         try:
             data = ujson.loads(body)
-            federated = properties.headers.get('x-received-from')
+            federated = properties.headers and properties.headers.get('x-received-from')
             if federated:
                 data.setdefault('metadata', {})['IsFederated'] = True
             if self.data_ready():
