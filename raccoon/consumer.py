@@ -49,6 +49,9 @@ class Consumer(threading.Thread):
 
         try:
             data = ujson.loads(body)
+            federated = properties.headers.get('x-received-from')
+            if federated:
+                data.setdefault('metadata', {})['IsFederated'] = True
             if self.data_ready():
                 if self.process_data_in_baches():
                     data_to_process = self.messages + [data]
