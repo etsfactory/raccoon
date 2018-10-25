@@ -1,2 +1,2 @@
 from .consumer import Consumer
-from .publisher import Publisher
+from .publisher import Publisher, RpcPublisherConnector
