@@ -8,6 +8,7 @@ from pika.exceptions import ConnectionClosed
 
 from raccoon.exceptions import ConnectionErrorException
 
+
 class Consumer(threading.Thread):
     """
     Procesa los datos de una cola del bus.
@@ -56,6 +57,7 @@ class Consumer(threading.Thread):
                     data_to_process = self.messages + [data]
                 else:
                     data_to_process = data
+                self.messages = []
                 result = self.process_function(data_to_process)
                 if self.reply:
                     ch.basic_publish(exchange='',
@@ -230,3 +232,4 @@ class Consumer(threading.Thread):
     def stop(self):
         self._stopped = True
                     
+
