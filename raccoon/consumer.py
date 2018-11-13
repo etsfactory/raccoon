@@ -56,7 +56,7 @@ class Consumer(threading.Thread):
                     data_to_process = self.messages + [data]
                 else:
                     data_to_process = data
-                result = self.process_function(method, properties, data_to_process)
+                result = self.process_function(data_to_process)
                 if self.reply:
                     ch.basic_publish(exchange='',
                                      routing_key=properties.reply_to,
@@ -98,7 +98,7 @@ class Consumer(threading.Thread):
         return res.method.message_count == 0
 
     def __init__(self, process_function, host, user, password, exchange, rabbit_queue_name, error_queue,
-                 prefetch_count=1, exchange_type='direct', retry_wait_time=1, routing_key=None, dle=None,
+                 prefetch_count=1, exchange_type='fanout', retry_wait_time=1, routing_key=None, dle=None,
                  dle_queue=None, dle_routing_key=None, reply_origin=False, retries_to_error=3, heartbeat=None):
         """
         :param process_function: Funcion que procesara los datos recibidos
@@ -154,10 +154,10 @@ class Consumer(threading.Thread):
             if self.user and self.password:
                 credentials = pika.PlainCredentials(self.user, self.password)
                 self.connection = pika.BlockingConnection(
-                    pika.ConnectionParameters(self.host, credentials=credentials))
+                    pika.ConnectionParameters(self.host, credentials=credentials, heartbeat=self.heartbeat))
             else:
                 self.connection = pika.BlockingConnection(
-                    pika.ConnectionParameters(self.host))
+                    pika.ConnectionParameters(self.host, heartbeat=self.heartbeat))
             
             channel = self.connection.channel()
             queue_args = None
@@ -224,7 +224,8 @@ class Consumer(threading.Thread):
             if not message:
                 continue
             method, properties, body = message
-            self.process_bus_data(self.ch, method, properties, body)
+            if (method and body):
+                self.process_bus_data(self.ch, method, properties, body)
 
     def stop(self):
         self._stopped = True
