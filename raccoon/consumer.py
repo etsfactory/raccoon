@@ -8,7 +8,6 @@ from pika.exceptions import ConnectionClosed
 
 from raccoon.exceptions import ConnectionErrorException
 
-
 class Consumer(threading.Thread):
     """
     Procesa los datos de una cola del bus.
@@ -57,8 +56,7 @@ class Consumer(threading.Thread):
                     data_to_process = self.messages + [data]
                 else:
                     data_to_process = data
-                self.messages = []
-                result = self.process_function(data_to_process)
+                result = self.process_function(method, properties, data_to_process)
                 if self.reply:
                     ch.basic_publish(exchange='',
                                      routing_key=properties.reply_to,
@@ -100,20 +98,20 @@ class Consumer(threading.Thread):
         return res.method.message_count == 0
 
     def __init__(self, process_function, host, user, password, exchange, rabbit_queue_name, error_queue,
-                 prefetch_count=1, exchange_type='fanout', retry_wait_time=1, routing_key=None, dle=None,
+                 prefetch_count=1, exchange_type='direct', retry_wait_time=1, routing_key=None, dle=None,
                  dle_queue=None, dle_routing_key=None, reply_origin=False, retries_to_error=3, heartbeat=None):
         """
         :param process_function: Funcion que procesara los datos recibidos
         :param host: Direccion del rabbit
         :param user : Usuario para conectar con rabbit
         :param password: Contraseña de rabbit
-        :param exchange: Nombre del exchange al que conectar la cola
+        :param exchange: Puede ser el nombre del exchange del que va a a leer o una lista de diccionarios con excgange y key
         :param rabbit_queue_name: Nombre de la cola
         :param error_queue: Cola para escribir los mensajes de error
         :param prefetch_count: Número de mensajes a leer de rabbit
         :param exchange_type: Typo de exchange a definir
         :param retry_wait_time: Segundos de espera para el siguiente reintento de conexión con rabbit
-        :param routing_key: Clave de la que escuchar
+        :param routing_key: Si se pasa un exchange, se puede especificar la clave de la que escuchar
         :param dle: Nombre del exchange al que enviar los mensajes en caso de error
         :param dle_queue: Nombre de la cola conectada al exchange de dle
         :param dle_routing_key: Clave de enrutado para la cola dle
@@ -152,62 +150,82 @@ class Consumer(threading.Thread):
 
     def run(self):
         retries = 0
-        self._stopped = False
-        while not self._stopped:
-            try:
+        try:
+            if self.user and self.password:
                 credentials = pika.PlainCredentials(self.user, self.password)
-                connection = pika.BlockingConnection(pika.ConnectionParameters(self.host, credentials=credentials,
-                                                                               heartbeat=self.heartbeat))
-                channel = connection.channel()
-                self.conn = connection
+                self.connection = pika.BlockingConnection(
+                    pika.ConnectionParameters(self.host, credentials=credentials))
+            else:
+                self.connection = pika.BlockingConnection(
+                    pika.ConnectionParameters(self.host))
+            
+            channel = self.connection.channel()
+            queue_args = None
+            if self.dle:
+                # Declara el Dead letter exchange
+                channel.exchange_declare(exchange=self.dle, durable=True, exchange_type=self.exchange_type)
+                result = channel.queue_declare(queue=self.dle_queue, durable=True, arguments=queue_args)
+                tmp_queue_name = result.method.queue
+                channel.queue_bind(exchange=self.dle, queue=tmp_queue_name, routing_key=self.dle_routing_key)
+                queue_args = {'x-dead-letter-exchange': self.dle}
+                if self.dle_routing_key is not None:
+                    queue_args['x-dead-letter-routing-key'] = self.dle_routing_key
+            
+            channel.queue_declare(queue=self.rabbit_queue_name)
+            self.ch = channel
+         
+            if isinstance(self.exchange, list):
+                for bus_filter in self.exchange:
+                    self.register_exchange_keys(bus_filter['exchange'], bus_filter['key'])
+            else:
+                self.register_exchange_keys(self.exchange, self.routing_key)
+               
+            retries = 0
+            self.listen(self.rabbit_queue_name)
 
-                queue_args = None
-                if self.dle:
-                    # Declara el Dead letter exchange
-                    channel.exchange_declare(exchange=self.dle, durable=True, exchange_type=self.exchange_type)
-                    result = channel.queue_declare(queue=self.dle_queue, durable=True, arguments=queue_args)
-                    tmp_queue_name = result.method.queue
-                    channel.queue_bind(exchange=self.dle, queue=tmp_queue_name, routing_key=self.dle_routing_key)
-                    queue_args = {'x-dead-letter-exchange': self.dle}
-                    if self.dle_routing_key is not None:
-                        queue_args['x-dead-letter-routing-key'] = self.dle_routing_key
-
-                channel.exchange_declare(exchange=self.exchange, durable=True, exchange_type=self.exchange_type)
-                self.ch = channel
-
-                result = channel.queue_declare(queue=self.rabbit_queue_name, durable=True, arguments=queue_args)
-                queue_name = result.method.queue
-
-                channel.queue_bind(exchange=self.exchange, queue=queue_name, routing_key=self.routing_key)
-
-                # Definiendo callback
-                channel.basic_qos(prefetch_count=self.prefetch_count)
-                channel.basic_consume(self.process_bus_data, queue=self.rabbit_queue_name)
-
-                retries = 0
-                channel.start_consuming()
-            except (ConnectionClosed, ConnectionErrorException) as e:
-                # Solo publica el primer error de conexion
-                if retries == self.retries_to_error:
-                    exception = {
-                        'error': e,
-                        'trace': traceback.format_exc()
-                    }
-                    self.error_queue.put(exception)
-                try:
-                    channel.close()
-                except Exception:
-                    pass
-            except Exception as e:
+        except (ConnectionClosed, ConnectionErrorException) as e:
+            # Solo publica el primer error de conexion
+            if retries == self.retries_to_error:
                 exception = {
                     'error': e,
                     'trace': traceback.format_exc()
                 }
                 self.error_queue.put(exception)
-            finally:
-                retries += 1
-                time.sleep(self.retry_wait_time)
+            try:
+                channel.close()
+            except Exception:
+                pass
+        except Exception as e:
+            exception = {
+                'error': e,
+                'trace': traceback.format_exc()
+            }
+            self.error_queue.put(exception)
+        finally:
+            retries += 1
+            time.sleep(self.retry_wait_time)
+    
+    def register_exchange_keys(self, exchange, key):
+        self.ch.exchange_declare(exchange=exchange,
+                            exchange_type=self.exchange_type)
+
+        self.ch.queue_bind(exchange=exchange,
+                                    queue=self.rabbit_queue_name,
+                                    routing_key=key)
+    
+    def listen(self, queue_name):
+        """
+        Escuchar los mensajes de la cola, en lugar de hacer basic_consume, 
+        lo hago de esta manera para poder decidir cuándo parar de escuchar
+        """
+        for message in self.ch.consume(queue_name, inactivity_timeout=1):
+            if self._stopped:
+                break
+            if not message:
+                continue
+            method, properties, body = message
+            self.process_bus_data(self.ch, method, properties, body)
 
     def stop(self):
         self._stopped = True
-        self.ch.stop_consuming()
+                    
