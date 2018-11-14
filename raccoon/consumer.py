@@ -146,12 +146,12 @@ class Consumer(threading.Thread):
         self.messages = []
 
         self._stopped = False
+        self.retries = 0
 
         # Se procesa la mitad de los objetos obtenidos si prefetch_count es distinto de 1
         self.batch_processing_size = 1 if prefetch_count == 1 else (prefetch_count // 2)
 
     def run(self):
-        retries = 0
         try:
             credentials = pika.PlainCredentials(self.user, self.password)
             self.connection = pika.BlockingConnection(
@@ -178,12 +178,12 @@ class Consumer(threading.Thread):
             else:
                 self.register_exchange_keys(self.exchange, self.routing_key)
                
-            retries = 0
+            self.retries = 0
             self.listen(self.rabbit_queue_name)
 
         except (ConnectionClosed, ConnectionErrorException) as e:
             # Solo publica el primer error de conexion
-            if retries == self.retries_to_error:
+            if self.retries == self.retries_to_error:
                 exception = {
                     'error': e,
                     'trace': traceback.format_exc()
@@ -200,8 +200,9 @@ class Consumer(threading.Thread):
             }
             self.error_queue.put(exception)
         finally:
-            retries += 1
+            self.retries += 1
             time.sleep(self.retry_wait_time)
+            self.reconnect()
     
     def register_exchange_keys(self, exchange, key):
         self.ch.exchange_declare(exchange=exchange,
