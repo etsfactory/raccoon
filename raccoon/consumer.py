@@ -146,63 +146,68 @@ class Consumer(threading.Thread):
         self.messages = []
 
         self._stopped = False
-        self.retries = 0
 
         # Se procesa la mitad de los objetos obtenidos si prefetch_count es distinto de 1
         self.batch_processing_size = 1 if prefetch_count == 1 else (prefetch_count // 2)
 
     def run(self):
-        try:
-            credentials = pika.PlainCredentials(self.user, self.password)
-            self.connection = pika.BlockingConnection(
-                pika.ConnectionParameters(self.host, credentials=credentials, heartbeat=self.heartbeat))
-            
-            channel = self.connection.channel()
-            queue_args = None
-            if self.dle:
-                # Declara el Dead letter exchange
-                channel.exchange_declare(exchange=self.dle, durable=True, exchange_type=self.exchange_type)
-                result = channel.queue_declare(queue=self.dle_queue, durable=True, arguments=queue_args)
-                tmp_queue_name = result.method.queue
-                channel.queue_bind(exchange=self.dle, queue=tmp_queue_name, routing_key=self.dle_routing_key)
-                queue_args = {'x-dead-letter-exchange': self.dle}
-                if self.dle_routing_key is not None:
-                    queue_args['x-dead-letter-routing-key'] = self.dle_routing_key
-            
-            channel.queue_declare(queue=self.rabbit_queue_name)
-            self.ch = channel
-         
-            if isinstance(self.exchange, list):
-                for bus_filter in self.exchange:
-                    self.register_exchange_keys(bus_filter['exchange'], bus_filter['key'])
-            else:
-                self.register_exchange_keys(self.exchange, self.routing_key)
-               
-            self.retries = 0
-            self.listen(self.rabbit_queue_name)
+        retries = 0
+        self._stopped = False
+        while not self._stopped:
+            try:
+                credentials = pika.PlainCredentials(self.user, self.password)
+                connection = pika.BlockingConnection(pika.ConnectionParameters(self.host, credentials=credentials,
+                                                                               heartbeat=self.heartbeat))
+                channel = connection.channel()
+                self.conn = connection
 
-        except (ConnectionClosed, ConnectionErrorException) as e:
-            # Solo publica el primer error de conexion
-            if self.retries == self.retries_to_error:
+                queue_args = None
+                if self.dle:
+                    # Declara el Dead letter exchange
+                    channel.exchange_declare(exchange=self.dle, durable=True, exchange_type=self.exchange_type)
+                    result = channel.queue_declare(queue=self.dle_queue, durable=True, arguments=queue_args)
+                    tmp_queue_name = result.method.queue
+                    channel.queue_bind(exchange=self.dle, queue=tmp_queue_name, routing_key=self.dle_routing_key)
+                    queue_args = {'x-dead-letter-exchange': self.dle}
+                    if self.dle_routing_key is not None:
+                        queue_args['x-dead-letter-routing-key'] = self.dle_routing_key
+
+                channel.exchange_declare(exchange=self.exchange, durable=True, exchange_type=self.exchange_type)
+                self.ch = channel
+
+                if isinstance(self.exchange, list):
+                    for bus_filter in self.exchange:
+                        self.register_exchange_keys(bus_filter['exchange'], bus_filter['key'])
+                else:
+                    self.register_exchange_keys(self.exchange, self.routing_key)
+
+                # Definiendo callback
+                channel.basic_qos(prefetch_count=self.prefetch_count)
+                channel.basic_consume(self.process_bus_data, queue=self.rabbit_queue_name)
+
+                retries = 0
+                channel.start_consuming()
+            except (ConnectionClosed, ConnectionErrorException) as e:
+                # Solo publica el primer error de conexion
+                if retries == self.retries_to_error:
+                    exception = {
+                        'error': e,
+                        'trace': traceback.format_exc()
+                    }
+                    self.error_queue.put(exception)
+                try:
+                    channel.close()
+                except Exception:
+                    pass
+            except Exception as e:
                 exception = {
                     'error': e,
                     'trace': traceback.format_exc()
                 }
                 self.error_queue.put(exception)
-            try:
-                channel.close()
-            except Exception:
-                pass
-        except Exception as e:
-            exception = {
-                'error': e,
-                'trace': traceback.format_exc()
-            }
-            self.error_queue.put(exception)
-        finally:
-            self.retries += 1
-            time.sleep(self.retry_wait_time)
-            self.reconnect()
+            finally:
+                retries += 1
+                time.sleep(self.retry_wait_time)
     
     def register_exchange_keys(self, exchange, key):
         self.ch.exchange_declare(exchange=exchange,
@@ -211,22 +216,7 @@ class Consumer(threading.Thread):
         self.ch.queue_bind(exchange=exchange,
                                     queue=self.rabbit_queue_name,
                                     routing_key=key)
-    
-    def listen(self, queue_name):
-        """
-        Escuchar los mensajes de la cola, en lugar de hacer basic_consume, 
-        lo hago de esta manera para poder decidir cuándo parar de escuchar
-        """
-        for message in self.ch.consume(queue_name, inactivity_timeout=1):
-            if self._stopped:
-                break
-            if not message:
-                continue
-            method, properties, body = message
-            if (method and body):
-                self.process_bus_data(self.ch, method, properties, body)
 
     def stop(self):
         self._stopped = True
-                    
-
+        self.ch.stop_consuming()
