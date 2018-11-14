@@ -153,13 +153,9 @@ class Consumer(threading.Thread):
     def run(self):
         retries = 0
         try:
-            if self.user and self.password:
-                credentials = pika.PlainCredentials(self.user, self.password)
-                self.connection = pika.BlockingConnection(
-                    pika.ConnectionParameters(self.host, credentials=credentials, heartbeat=self.heartbeat))
-            else:
-                self.connection = pika.BlockingConnection(
-                    pika.ConnectionParameters(self.host, heartbeat=self.heartbeat))
+            credentials = pika.PlainCredentials(self.user, self.password)
+            self.connection = pika.BlockingConnection(
+                pika.ConnectionParameters(self.host, credentials=credentials, heartbeat=self.heartbeat))
             
             channel = self.connection.channel()
             queue_args = None
