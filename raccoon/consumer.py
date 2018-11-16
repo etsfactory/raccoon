@@ -35,7 +35,6 @@ class Consumer(threading.Thread):
     def reconnect(self):
         """Will be invoked by the IOLoop timer if the connection is
         closed. See the on_connection_closed method.
-
         """
         # Create a new connection
         self.run()
@@ -172,14 +171,17 @@ class Consumer(threading.Thread):
                     if self.dle_routing_key is not None:
                         queue_args['x-dead-letter-routing-key'] = self.dle_routing_key
 
-                channel.exchange_declare(exchange=self.exchange, durable=True, exchange_type=self.exchange_type)
                 self.ch = channel
 
                 if isinstance(self.exchange, list):
                     for bus_filter in self.exchange:
-                        self.register_exchange_keys(bus_filter['exchange'], bus_filter['key'])
+                        if 'exchange_type' in bus_filter:
+                            type_exchange = bus_filter['exchange_type']
+                        else:
+                            type_exchange = self.exchange_type
+                        self.register_exchange_keys(bus_filter['exchange'], bus_filter['key'], type_exchange)
                 else:
-                    self.register_exchange_keys(self.exchange, self.routing_key)
+                    self.register_exchange_keys(self.exchange, self.routing_key, self.exchange_type)
 
                 # Definiendo callback
                 channel.basic_qos(prefetch_count=self.prefetch_count)
@@ -209,9 +211,9 @@ class Consumer(threading.Thread):
                 retries += 1
                 time.sleep(self.retry_wait_time)
     
-    def register_exchange_keys(self, exchange, key):
+    def register_exchange_keys(self, exchange, key, exchange_type):
         self.ch.exchange_declare(exchange=exchange,
-                            exchange_type=self.exchange_type)
+                            exchange_type=exchange_type)
 
         self.ch.queue_bind(exchange=exchange,
                                     queue=self.rabbit_queue_name,
