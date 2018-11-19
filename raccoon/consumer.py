@@ -172,12 +172,12 @@ class Consumer(threading.Thread):
                         queue_args['x-dead-letter-routing-key'] = self.dle_routing_key
 
                 self.ch = channel
+                channel.queue_declare(queue=self.rabbit_queue_name, durable=True, arguments=queue_args)
 
                 if isinstance(self.exchange, list):
                     for bus_filter in self.exchange:
-                        if 'exchange_type' in bus_filter:
-                            type_exchange = bus_filter['exchange_type']
-                        else:
+                        type_exchange = bus_filter.get('exchange_type')
+                        if not type_exchange:
                             type_exchange = self.exchange_type
                         self.register_exchange_keys(bus_filter['exchange'], bus_filter['key'], type_exchange)
                 else:
