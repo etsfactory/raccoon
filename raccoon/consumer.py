@@ -179,9 +179,9 @@ class Consumer(threading.Thread):
                         type_exchange = bus_filter.get('exchange_type')
                         if not type_exchange:
                             type_exchange = self.exchange_type
-                        self.register_exchange_keys(bus_filter['exchange'], bus_filter['key'], type_exchange)
+                        self.register_exchange_keys(bus_filter['exchange'], bus_filter['key'], type_exchange, bus_filter['durable'])
                 else:
-                    self.register_exchange_keys(self.exchange, self.routing_key, self.exchange_type)
+                    self.register_exchange_keys(self.exchange, self.routing_key, self.exchange_type, True)
 
                 # Definiendo callback
                 channel.basic_qos(prefetch_count=self.prefetch_count)
@@ -211,9 +211,10 @@ class Consumer(threading.Thread):
                 retries += 1
                 time.sleep(self.retry_wait_time)
     
-    def register_exchange_keys(self, exchange, key, exchange_type):
+    def register_exchange_keys(self, exchange, key, exchange_type, exchange_durable):
         self.ch.exchange_declare(exchange=exchange,
-                            exchange_type=exchange_type)
+                            exchange_type=exchange_type,
+                            durable=exchange_durable)
 
         self.ch.queue_bind(exchange=exchange,
                                     queue=self.rabbit_queue_name,
