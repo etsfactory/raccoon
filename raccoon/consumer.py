@@ -176,10 +176,13 @@ class Consumer(threading.Thread):
 
                 if isinstance(self.exchange, list):
                     for bus_filter in self.exchange:
+                        exchange = bus_filter.get('exchange')
+                        key = bus_filter.get('key', '')
                         type_exchange = bus_filter.get('exchange_type')
+                        durable = bus_filter.get('durable', False)
                         if not type_exchange:
                             type_exchange = self.exchange_type
-                        self.register_exchange_keys(bus_filter['exchange'], bus_filter['key'], type_exchange, bus_filter['durable'])
+                        self.register_exchange_keys(exchange, key, type_exchange, durable)
                 else:
                     self.register_exchange_keys(self.exchange, self.routing_key, self.exchange_type, True)
 
