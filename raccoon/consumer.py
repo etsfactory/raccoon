@@ -51,13 +51,15 @@ class Consumer(threading.Thread):
             federated = properties.headers and properties.headers.get('x-received-from')
             if federated:
                 data.setdefault('metadata', {})['IsFederated'] = True
+            data.setdefault('metadata', {})['exchange'] = method.exchange
+            data.setdefault('metadata', {})['routing_key'] = method.routing_key
             if self.data_ready():
                 if self.process_data_in_baches():
                     data_to_process = self.messages + [data]
                 else:
                     data_to_process = data
                 self.messages = []
-                result = self.process_function(method, properties, data_to_process)
+                result = self.process_function(data_to_process)
                 if self.reply:
                     ch.basic_publish(exchange='',
                                      routing_key=properties.reply_to,
