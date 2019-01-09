@@ -88,6 +88,12 @@ class Consumer(threading.Thread):
                 exception.update({'body': body})
             self.error_queue.put(exception)
 
+            if self.reply:
+                ch.basic_publish(exchange='',
+                                 routing_key=properties.reply_to,
+                                 properties=pika.BasicProperties(correlation_id=properties.correlation_id),
+                                 body=ujson.dumps(exception))
+
             if self.dle:
                 ch.basic_reject(delivery_tag=method.delivery_tag, requeue=False)
             else:
