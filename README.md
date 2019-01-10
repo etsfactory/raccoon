@@ -1,11 +1,11 @@
 # Raccoon
 
-Racoon es una linrería que implementa un wrapper sobre pika (gestiona la conexión a un bus rabbitMQ).
+Racoon es una librería que implementa un wrapper sobre pika (gestiona la conexión a un bus rabbitMQ).
 
 Racoon permite la creación de threads para leer mensajes de varios exchanges con varias keys a la vez. Además 
 permite la reconexión al bus automáticamente y tras varios intentos.
 
-## Gettinig started
+## Getting started
 
 Para empezar a usar esta librería puedes descargarla mediante el comando de python:
 
