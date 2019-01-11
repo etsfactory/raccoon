@@ -77,6 +77,8 @@ class Consumer(threading.Thread):
                 raise ConnectionErrorException('NACK not delivered.')
             raise e
         except TransientException as e:
+            if method.redelivered:
+                raise e
             ch.basic_nack(delivery_tag=method.delivery_tag)
         except ConnectionClosed as e:
             raise e
