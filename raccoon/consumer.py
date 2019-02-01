@@ -98,6 +98,7 @@ class Consumer(threading.Thread):
                 else:
                     # Se ignora el mensaje y se elimina de la cola
                     ch.basic_ack(delivery_tag=tag)
+                self.delivery_tags.remove(tag)
             # El resto fueron procesados adecuadamente
             for tag in self.delivery_tags[:]:
                 ch.basic_ack(delivery_tag=tag)
