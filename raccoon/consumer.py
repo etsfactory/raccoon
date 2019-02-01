@@ -66,10 +66,11 @@ class Consumer(threading.Thread):
                                      routing_key=properties.reply_to,
                                      properties=pika.BasicProperties(correlation_id=properties.correlation_id),
                                      body=ujson.dumps(result))
-                for data in data_to_process:
-                    delivery_tag = data['metadata']['delivery_tag']
-                    ch.basic_ack(delivery_tag=delivery_tag)
-                    self.delivery_tags.pop(delivery_tag)
+
+                # Se confirman todos los mensajes
+                for tag in self.delivery_tags:
+                    ch.basic_ack(delivery_tag=tag)
+                    self.delivery_tags.pop(tag)
             else:
                 self.delivery_tags.append(method.delivery_tag)
                 # Se almacena el mensaje para su posterior procesado
