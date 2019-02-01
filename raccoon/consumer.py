@@ -46,6 +46,7 @@ class Consumer(threading.Thread):
         En caso de error, pone un mensaje en la cola de errores.
         """
         try:
+            self.delivery_tags.append(method.delivery_tag)
             data = ujson.loads(body)
             federated = properties.headers and properties.headers.get('x-received-from')
             if federated:
@@ -54,7 +55,6 @@ class Consumer(threading.Thread):
             data.setdefault('metadata', {})['routing_key'] = method.routing_key
             data.setdefault('metadata', {})['delivery_tag'] = method.delivery_tag
             if self.data_ready():
-                self.delivery_tags.append(method.delivery_tag)
                 if self.process_data_in_baches():
                     data_to_process = self.messages + [data]
                 else:
@@ -72,7 +72,6 @@ class Consumer(threading.Thread):
                     ch.basic_ack(delivery_tag=tag)
                     self.delivery_tags.remove(tag)
             else:
-                self.delivery_tags.append(method.delivery_tag)
                 # Se almacena el mensaje para su posterior procesado
                 self.messages.append(data)
 
