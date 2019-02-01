@@ -68,7 +68,7 @@ class Consumer(threading.Thread):
                                      body=ujson.dumps(result))
 
                 # Se confirman todos los mensajes
-                for tag in self.delivery_tags:
+                for tag in self.delivery_tags[:]:
                     ch.basic_ack(delivery_tag=tag)
                     self.delivery_tags.remove(tag)
             else:
