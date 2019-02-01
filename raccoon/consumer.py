@@ -70,7 +70,7 @@ class Consumer(threading.Thread):
                 # Se confirman todos los mensajes
                 for tag in self.delivery_tags:
                     ch.basic_ack(delivery_tag=tag)
-                    self.delivery_tags.pop(tag)
+                    self.delivery_tags.remove(tag)
             else:
                 self.delivery_tags.append(method.delivery_tag)
                 # Se almacena el mensaje para su posterior procesado
@@ -80,7 +80,7 @@ class Consumer(threading.Thread):
             try:
                 for tag in self.delivery_tags[:]:
                     ch.basic_nack(delivery_tag=tag)
-                    self.delivery_tags.pop(tag)
+                    self.delivery_tags.remove(tag)
             except ConnectionClosed:
                 raise ConnectionErrorException('NACK not delivered.')
             raise e
@@ -89,7 +89,7 @@ class Consumer(threading.Thread):
                 raise e
             for tag in self.delivery_tags[:]:
                 ch.basic_nack(delivery_tag=tag)
-                self.delivery_tags.pop(tag)
+                self.delivery_tags.remove(tag)
         except PartialyProcessedException as e:
             # Rechazamos los mensajes fallidos
             for msg in e.failed_messages:
@@ -102,7 +102,7 @@ class Consumer(threading.Thread):
             # El resto fueron procesados adecuadamente
             for tag in self.delivery_tags[:]:
                 ch.basic_ack(delivery_tag=tag)
-                self.delivery_tags.pop(tag)
+                self.delivery_tags.remove(tag)
         except ConnectionClosed as e:
             raise e
         except Exception as e:
@@ -127,7 +127,7 @@ class Consumer(threading.Thread):
                 else:
                     # Se ignora el mensaje y se elimina de la cola
                     ch.basic_ack(delivery_tag=tag)
-                self.delivery_tags.pop(tag)
+                self.delivery_tags.remove(tag)
 
     def is_queue_empty(self):
         res = self.ch.queue_declare(queue=self.rabbit_queue_name,
