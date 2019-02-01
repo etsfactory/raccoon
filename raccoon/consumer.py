@@ -67,7 +67,7 @@ class Consumer(threading.Thread):
                                      properties=pika.BasicProperties(correlation_id=properties.correlation_id),
                                      body=ujson.dumps(result))
                 for data in data_to_process:
-                    delivery_tag = data['metadata']['dalivery_tag']
+                    delivery_tag = data['metadata']['delivery_tag']
                     ch.basic_ack(delivery_tag=delivery_tag)
                     self.delivery_tags.pop(delivery_tag)
             else:
