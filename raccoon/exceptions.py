@@ -4,7 +4,7 @@ class ConnectionErrorException(Exception):
 
 class RoutingErrorException(Exception):
     def __init__(self, mt_name):
-        super().__init__(self)
+        super().__init__()
         self.mt_name = mt_name
 
 
