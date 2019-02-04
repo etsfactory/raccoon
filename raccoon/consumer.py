@@ -85,7 +85,8 @@ class Consumer(threading.Thread):
             raise e
         except TransientException as e:
             if method.redelivered:
-                raise e
+                # Se notifica el error y se reencola el mensaje apropiadamente
+                self._process_unhandled_exception(ch, method, properties, e, body)
             for tag in self.delivery_tags[:]:
                 ch.basic_nack(delivery_tag=tag)
                 self.delivery_tags.remove(tag)
@@ -106,28 +107,33 @@ class Consumer(threading.Thread):
         except ConnectionClosed as e:
             raise e
         except Exception as e:
-            exception = {
-                'error': e,
-                'trace': traceback.format_exc()
-            }
+            self._process_unhandled_exception(ch, method, properties, e, body)
 
-            if body:
-                exception.update({'body': body})
-            self.error_queue.put(exception)
+    def _process_unhandled_exception(self, ch, method, properties, exc_value, body=None):
+        """
+        Notifica el error al hilo principal y rechaza el mensaje si es necesario
+        """
+        exception = {
+            'error': exc_value,
+            'trace': traceback.format_exc()
+        }
 
-            if self.reply:
-                ch.basic_publish(exchange='',
-                                 routing_key=properties.reply_to,
-                                 properties=pika.BasicProperties(correlation_id=properties.correlation_id),
-                                 body=ujson.dumps(exception))
+        if body:
+            exception.update({'body': body})
+        self.error_queue.put(exception)
 
-            for tag in self.delivery_tags[:]:
-                if self.dle:
-                    ch.basic_reject(delivery_tag=tag, requeue=False)
-                else:
-                    # Se ignora el mensaje y se elimina de la cola
-                    ch.basic_ack(delivery_tag=tag)
-                self.delivery_tags.remove(tag)
+        if self.reply:
+            ch.basic_publish(exchange='',
+                             routing_key=properties.reply_to,
+                             properties=pika.BasicProperties(correlation_id=properties.correlation_id),
+                             body=ujson.dumps(exception))
+        for tag in self.delivery_tags[:]:
+            if self.dle:
+                ch.basic_reject(delivery_tag=tag, requeue=False)
+            else:
+                # Se ignora el mensaje y se elimina de la cola
+                ch.basic_ack(delivery_tag=tag)
+            self.delivery_tags.remove(tag)
 
     def is_queue_empty(self):
         res = self.ch.queue_declare(queue=self.rabbit_queue_name,
@@ -252,7 +258,7 @@ class Consumer(threading.Thread):
             finally:
                 retries += 1
                 time.sleep(self.retry_wait_time)
-    
+
     def bind_queue(self, exchange, key, exchange_type, exchange_durable):
         self.ch.exchange_declare(exchange=exchange,
                             exchange_type=exchange_type,
