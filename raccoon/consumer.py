@@ -86,7 +86,7 @@ class Consumer(threading.Thread):
         except TransientException as e:
             if method.redelivered:
                 # Se notifica el error y se reencola el mensaje apropiadamente
-                self._process_unhandled_exception(ch, method, properties, e, body)
+                self._notify_application_exception(ch, method, properties, e, body)
             for tag in self.delivery_tags[:]:
                 ch.basic_nack(delivery_tag=tag)
                 self.delivery_tags.remove(tag)
@@ -107,9 +107,9 @@ class Consumer(threading.Thread):
         except ConnectionClosed as e:
             raise e
         except Exception as e:
-            self._process_unhandled_exception(ch, method, properties, e, body)
+            self._notify_application_exception(ch, method, properties, e, body)
 
-    def _process_unhandled_exception(self, ch, method, properties, exc_value, body=None):
+    def _notify_application_exception(self, ch, method, properties, exc_value, body=None):
         """
         Notifica el error al hilo principal y rechaza el mensaje si es necesario
         """
