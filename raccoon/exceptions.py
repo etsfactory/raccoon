@@ -10,3 +10,9 @@ class RoutingErrorException(Exception):
 
 class TransientException(Exception):
     pass
+
+
+class PartialyProcessedException(Exception):
+    def __init__(self, failed_messages):
+        super().__init__(self, "Some messages failed while processing: {}".format(failed_messages))
+        self.failed_messages = failed_messages

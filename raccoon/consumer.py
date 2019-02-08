@@ -6,7 +6,7 @@ import ujson
 import pika
 from pika.exceptions import ConnectionClosed
 
-from raccoon.exceptions import ConnectionErrorException, TransientException
+from raccoon.exceptions import ConnectionErrorException, TransientException, PartialyProcessedException
 
 
 class Consumer(threading.Thread):
@@ -45,14 +45,15 @@ class Consumer(threading.Thread):
         En caso de que la clase defina el atributo "prefetch_count", los mensajes se procesaran el bloque.
         En caso de error, pone un mensaje en la cola de errores.
         """
-
         try:
+            self.delivery_tags.append(method.delivery_tag)
             data = ujson.loads(body)
             federated = properties.headers and properties.headers.get('x-received-from')
             if federated:
                 data.setdefault('metadata', {})['IsFederated'] = True
             data.setdefault('metadata', {})['exchange'] = method.exchange
             data.setdefault('metadata', {})['routing_key'] = method.routing_key
+            data.setdefault('metadata', {})['delivery_tag'] = method.delivery_tag
             if self.data_ready():
                 if self.process_data_in_baches():
                     data_to_process = self.messages + [data]
@@ -65,44 +66,74 @@ class Consumer(threading.Thread):
                                      routing_key=properties.reply_to,
                                      properties=pika.BasicProperties(correlation_id=properties.correlation_id),
                                      body=ujson.dumps(result))
+
+                # Se confirman todos los mensajes
+                for tag in self.delivery_tags[:]:
+                    ch.basic_ack(delivery_tag=tag)
+                    self.delivery_tags.remove(tag)
             else:
                 # Se almacena el mensaje para su posterior procesado
                 self.messages.append(data)
-            ch.basic_ack(delivery_tag=method.delivery_tag)
 
         except ConnectionErrorException as e:
             try:
-                ch.basic_nack(delivery_tag=method.delivery_tag)
+                for tag in self.delivery_tags[:]:
+                    ch.basic_nack(delivery_tag=tag)
+                    self.delivery_tags.remove(tag)
             except ConnectionClosed:
                 raise ConnectionErrorException('NACK not delivered.')
             raise e
         except TransientException as e:
             if method.redelivered:
-                raise e
-            ch.basic_nack(delivery_tag=method.delivery_tag)
+                # Se notifica el error y se reencola el mensaje apropiadamente
+                self._notify_application_exception(ch, method, properties, e, body)
+            for tag in self.delivery_tags[:]:
+                ch.basic_nack(delivery_tag=tag)
+                self.delivery_tags.remove(tag)
+        except PartialyProcessedException as e:
+            # Rechazamos los mensajes fallidos
+            for msg in e.failed_messages:
+                tag = msg['metadata']['delivery_tag']
+                if self.dle:
+                    ch.basic_reject(delivery_tag=tag, requeue=False)
+                else:
+                    # Se ignora el mensaje y se elimina de la cola
+                    ch.basic_ack(delivery_tag=tag)
+                self.delivery_tags.remove(tag)
+            # El resto fueron procesados adecuadamente
+            for tag in self.delivery_tags[:]:
+                ch.basic_ack(delivery_tag=tag)
+                self.delivery_tags.remove(tag)
         except ConnectionClosed as e:
             raise e
         except Exception as e:
-            exception = {
-                'error': e,
-                'trace': traceback.format_exc()
-            }
+            self._notify_application_exception(ch, method, properties, e, body)
 
-            if body:
-                exception.update({'body': body})
-            self.error_queue.put(exception)
+    def _notify_application_exception(self, ch, method, properties, exc_value, body=None):
+        """
+        Notifica el error al hilo principal y rechaza el mensaje si es necesario
+        """
+        exception = {
+            'error': exc_value,
+            'trace': traceback.format_exc()
+        }
 
-            if self.reply:
-                ch.basic_publish(exchange='',
-                                 routing_key=properties.reply_to,
-                                 properties=pika.BasicProperties(correlation_id=properties.correlation_id),
-                                 body=ujson.dumps(exception))
+        if body:
+            exception.update({'body': body})
+        self.error_queue.put(exception)
 
+        if self.reply:
+            ch.basic_publish(exchange='',
+                             routing_key=properties.reply_to,
+                             properties=pika.BasicProperties(correlation_id=properties.correlation_id),
+                             body=ujson.dumps(exception))
+        for tag in self.delivery_tags[:]:
             if self.dle:
-                ch.basic_reject(delivery_tag=method.delivery_tag, requeue=False)
+                ch.basic_reject(delivery_tag=tag, requeue=False)
             else:
                 # Se ignora el mensaje y se elimina de la cola
-                ch.basic_ack(delivery_tag=method.delivery_tag)
+                ch.basic_ack(delivery_tag=tag)
+            self.delivery_tags.remove(tag)
 
     def is_queue_empty(self):
         res = self.ch.queue_declare(queue=self.rabbit_queue_name,
@@ -155,6 +186,7 @@ class Consumer(threading.Thread):
         self.count = 0
         self.number_of_messages = 0
         self.messages = []
+        self.delivery_tags = []
 
         self._stopped = False
 
@@ -203,6 +235,7 @@ class Consumer(threading.Thread):
                 channel.basic_consume(self.process_bus_data, queue=self.rabbit_queue_name)
 
                 retries = 0
+                self.delivery_tags = []
                 channel.start_consuming()
             except (ConnectionClosed, ConnectionErrorException) as e:
                 # Solo publica el primer error de conexion
@@ -225,7 +258,7 @@ class Consumer(threading.Thread):
             finally:
                 retries += 1
                 time.sleep(self.retry_wait_time)
-    
+
     def bind_queue(self, exchange, key, exchange_type, exchange_durable):
         self.ch.exchange_declare(exchange=exchange,
                             exchange_type=exchange_type,
