@@ -8,6 +8,7 @@ from pika.exceptions import ConnectionClosed
 
 
 class Publisher(object):
+    """Clase encargada de publicar los mensajes de forma asíncrona"""
 
     def __init__(self, host, user, password, exchange, exchange_type='fanout', retry_wait_time=1, max_retries=1,
                  source_app=None):
@@ -44,6 +45,14 @@ class Publisher(object):
         self.channel.close()
 
     def publish_msg(self, message, mandatory=False, routing_key=''):
+        """
+        Método público encargado de enviar  el mensaje
+
+        :param message: mensaje a enviar
+        :param mandatory: activa el modo de confirmación ACK en RabbitMQ
+        :param routing_key: la ruta a vincular
+        :return: True si la confirmación no está activada. Si está activada True si el mensaje fue entregado, si no False
+        """
         tries = 0
         finished = False
         if mandatory:
@@ -67,6 +76,7 @@ class Publisher(object):
 
 
 class RpcPublisher(object):
+    """Clase encargada de publicar los mensajes de forma síncrona"""
 
     def __init__(self, host, user, password, exchange, exchange_type='fanout', retry_wait_time=1, max_retries=1,
                  time_limit=300, source_app=None):
@@ -117,6 +127,14 @@ class RpcPublisher(object):
         self.channel.close()
 
     def rpc_call(self, message, mandatory=False, routing_key=''):
+        """
+        Método público encargado de enviar  el mensaje
+
+        :param message: mensaje a enviar
+        :param mandatory: activa el modo de confirmación ACK en RabbitMQ
+        :param routing_key: la ruta a vincular
+        :return: JSON con la respuesta recibida despues de enviar el mensaje
+        """
         tries = 0
         finished = False
         if mandatory:
