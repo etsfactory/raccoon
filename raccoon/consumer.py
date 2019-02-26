@@ -19,7 +19,7 @@ class Consumer(threading.Thread):
     - prefetch_count==1, la función definida recibe el mensaje de la cola parseado.
     - En otro caso, la función definida recibe una lista con (prefetch_count // 2) mensajes de la cola parseados.
 
-    La funcion que se para por process_function tiene que ser capaz de manejar el tipo de dato correspondiente
+    La funcion que se pasa por process_function tiene que ser capaz de manejar el tipo de dato correspondiente
     (lista/mensaje que va a depender del valor de prefect_count).
     """
 

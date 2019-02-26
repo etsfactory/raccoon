@@ -16,8 +16,9 @@ colas del bus. Para ello, las dos clases contienen los métodos ``publish_msg()`
 
 Consumer
 --------
-Wrapper personalizado que procesa los datos recibidos de una cola del bus. El objeto consumidor se ejecuta en un hilo
-independiente.
+Wrapper personalizado que gestiona la conexión y comunicación con el bus, procesando los datos de un exchange. Para
+ello, crea y conecta una cola en modo escucha al exchange, en caso de no estar ya creada.
+
 
 .. automodule:: raccoon.consumer
     :members:

@@ -17,7 +17,7 @@ Empezando a utilizar ``Raccoon``:
     BUS_PASSWORD = config.get('bus', 'password')
     EXCHANGE_ERROR = 'Error'
 
-    msg = "Unhandled system error"
+    msg = {"error": "Unhandled system error"}
 
     with Publisher(st.BUS_HOST, st.BUS_USER, st.BUS_PASSWORD, st.EXCHANGE_ERROR) as bus:
         bus.publish_msg(msg)
