@@ -3,42 +3,21 @@ Ejemplos
 
 Sección dedicada a mostrar ejemplos de uso de la librería
 
-**Manejo de excepciones no controladas en Flask, enviando un mensaje al bus**
+**Manejo de excepción, enviando un mensaje al bus**
 
 .. code-block:: python
 
-    import ujson
-    import sys
-    import traceback as tb
-
-    from cancun.errors.exceptions import InternalServerErrorException
-    from flask import Flask, Response, request
+    from datetime import datetime
 
     import ..settings as st
 
 
-    @app.errorhandler(Exception)
-    def all_exception_handler(error):
-        process_exception(error, request=request, exc_tb=tb.format_exc())
-        exception = InternalServerErrorException()
-        return Response(response=ujson.dumps(exception.to_dict()),
-                        status=exception.status_code,
-                        mimetype='application/json')
-
-
-    def process_exception(exception, request=None, exc_tb=None):
-        if exc_tb is None:
-            exc_tb = tb.format_exc()
-
-        log_exception(type(exception), exception, exc_tb, request)
-
+    def process_exception(exception, request=None):
         # Creamos el JSON con el mensaje a escribir en el bus, en la cola de error
         msg = {
             "date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "app_name": __name__.split('.')[0],
-            "server": socket.gethostname(),
             "message": str(exception),
-            "stack": exc_tb,
             "type": type(exception).__name__,
         }
 
@@ -47,28 +26,8 @@ Sección dedicada a mostrar ejemplos de uso de la librería
             if request.data:
                 msg["tag"] = request.json
 
-        with Publisher(st.BUS_HOST, st.BUS_USER, st.BUS_PASSWORD, st.EXCHANGE_ERROR) as bus:
+        with Publisher(st.BUS_HOST, st.BUS_USER, st.BUS_PASSWORD, st.EXCHANGE_ERROR, source_app=st.APP_NAME) as bus:
             bus.publish_msg(msg)
-
-
-    def log_exception(exc_type, exc_value, exc_tb, request=None):
-
-        try:
-
-            if not isinstance(exc_tb, str):
-                exc_tb = ''.join(tb.format_tb(exc_tb))
-
-            msg = '\nRequest: ' + str(request)[14:-1] + '\n' if request is not None else '\n'
-
-            msg += ERROR_FORMAT
-            msg = msg.replace('{t}', exc_type.__name__)
-            msg = msg.replace('{m}', str(exc_value))
-            msg = msg.replace('{tb}', exc_tb)
-
-            st.logger.error(msg)
-        except:
-            pass
-
 
 
 **Clase consumidora**
