@@ -100,7 +100,7 @@ Sección dedicada a mostrar ejemplos de uso de la librería
                 st.RABBITMQ_QUEUE,
                 error)
 
-                self.bus_thread.start()
+            self.bus_thread.start()
 
         def stop(self):
             """
