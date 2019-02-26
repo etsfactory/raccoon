@@ -3,10 +3,6 @@ from setuptools import setup, find_packages
 from version import __version__
 
 
-with open('requirements.txt') as fp:
-    install_requires = fp.read()
-
-
 setup(
     name='raccoon',
     version=__version__,
@@ -21,6 +17,10 @@ setup(
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
     ],
-    install_requires=install_requires,
+    install_requires=[
+        'pika==0.12.0',
+        'ujson==1.35',
+        'numpydoc'
+    ],
     zip_safe=True
 )
