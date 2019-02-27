@@ -11,6 +11,8 @@ Empezando a utilizar ``Raccoon``:
 
     from raccoon import Publisher
 
+    import ..settings as st
+
 
     BUS_HOST = config.get('bus', 'host')
     BUS_USER = config.get('bus', 'user')
@@ -30,6 +32,8 @@ Empezando a utilizar ``Raccoon``:
     import logging.config
 
     from raccoon import Publisher
+
+    import ..settings as st
 
 
     BUS_HOST = config.get('bus', 'host')
