@@ -1,10 +1,10 @@
 class ConnectionErrorException(Exception):
-    """Captura excepciones de conexión."""
+    """Captura excepciones por error de conexión."""
     pass
 
 
 class RoutingErrorException(Exception):
-    """Captura excepciones cuando no hay coincidencias con la ruta."""
+    """Captura excepciones cuando hay un error con el `routing key` al enviar un mensaje."""
 
     def __init__(self, mt_name):
         super().__init__()
