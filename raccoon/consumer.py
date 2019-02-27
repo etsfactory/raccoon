@@ -13,11 +13,14 @@ class Consumer(threading.Thread):
     """
     Procesa los datos de una cola del bus.
     Permite la opción de procesarlos en bloques utilizando el argumento "prefetch_count".
+
     Los datos pasados a la función definida en el argumento "process_function" dependen del valor de "prefetch_count":
-      - prefetch_count==1, la función definida recibe el mensaje de la cola parseado.
-      - En otro caso, la función definida recibe una lista con (prefetch_count // 2) mensajes de la cola parseados.
-    La funcion que se para por process_function tiene que ser capaz de manejar el tipo de dato correspondiente
-     (lista/mensaje que va a depender del valor de prefect_count).
+
+    - prefetch_count==1, la función definida recibe el mensaje de la cola parseado.
+    - En otro caso, la función definida recibe una lista con (prefetch_count // 2) mensajes de la cola parseados.
+
+    La funcion que se pasa por process_function tiene que ser capaz de manejar el tipo de dato correspondiente
+    (lista/mensaje que va a depender del valor de prefect_count).
     """
 
     def process_data_in_baches(self):
@@ -26,6 +29,7 @@ class Consumer(threading.Thread):
     def data_ready(self):
         """
         Comprueba que tenemos listo toda los datos que queremos procesar
+
         :return: Si el bloque de datos esta listo para ser procesado.
         """
         return (not self.process_data_in_baches()
@@ -33,9 +37,7 @@ class Consumer(threading.Thread):
                 or len(self.messages) >= self.batch_processing_size)
 
     def reconnect(self):
-        """Will be invoked by the IOLoop timer if the connection is
-        closed. See the on_connection_closed method.
-        """
+        """Es ejecutado por el temporizador IOLoop si la conexión se cierra"""
         # Create a new connection
         self.run()
 
@@ -147,7 +149,7 @@ class Consumer(threading.Thread):
         """
         :param process_function: Funcion que procesara los datos recibidos
         :param host: Direccion del rabbit
-        :param user : Usuario para conectar con rabbit
+        :param user: Usuario para conectar con rabbit
         :param password: Contraseña de rabbit
         :param exchange: Puede ser el nombre del exchange del que va a a leer o una lista de diccionarios con excgange y key
         :param rabbit_queue_name: Nombre de la cola
@@ -194,6 +196,9 @@ class Consumer(threading.Thread):
         self.batch_processing_size = 1 if prefetch_count == 1 else (prefetch_count // 2)
 
     def run(self):
+        """
+        Crea la cola consumidora e inicializa el proceso de escucha
+        """
         retries = 0
         self._stopped = False
         while not self._stopped:
