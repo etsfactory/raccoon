@@ -35,3 +35,6 @@ Módulo encargado del tratamiento personalizado de excepciones.
 
 .. autoclass:: raccoon.exceptions.TransientException
     :members:
+
+.. autoclass:: raccoon.exceptions.PartialyProcessedException
+    :members:

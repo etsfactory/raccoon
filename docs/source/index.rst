@@ -31,6 +31,10 @@ Los módulos más importantes que componen ``raccoon`` son:
 - ``consumer.py``, wrapper que procesa los datos recibidos de una cola del bus
 - ``exceptions.py`` tratamiento personalizado de excepciones
 
+
+Tabla de Contenidos
+===================
+
 .. toctree::
    :maxdepth: 2
 
