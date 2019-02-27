@@ -194,7 +194,7 @@ todo_include_todos = True
 # sphinxcontrib-versioning
 scv_recent_tag = True
 scv_priority = 'tags'
-scv_whitelist_tags = (re.compile(r'[1]\.([1-9]+[0-9]|[2-9])\.([1-9]+[0-9]|[1-9])'), re.compile(r'([1-9]+[0-9]|[2-9])\.\d+\.\d+'),)
+scv_whitelist_tags = (re.compile(r'[1]\.([1-9]+[0-9]|[6-9])\.([1-9]+[0-9]|[0-9])'), re.compile(r'([1-9]+[0-9]|[2-9])\.\d+\.\d+'),)
 scv_invert = True
 
 autoclass_content = 'both'
