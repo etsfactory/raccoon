@@ -11,8 +11,6 @@ Empezando a utilizar ``Raccoon``:
 
     from raccoon import Publisher
 
-    import ..settings as st
-
 
     BUS_HOST = config.get('bus', 'host')
     BUS_USER = config.get('bus', 'user')
@@ -21,7 +19,7 @@ Empezando a utilizar ``Raccoon``:
 
     msg = {"error": "Unhandled system error"}
 
-    with Publisher(st.BUS_HOST, st.BUS_USER, st.BUS_PASSWORD, st.EXCHANGE_ERROR) as bus:
+    with Publisher(BUS_HOST, BUS_USER, BUS_PASSWORD, EXCHANGE_ERROR) as bus:
         bus.publish_msg(msg)
 
 
@@ -32,8 +30,6 @@ Empezando a utilizar ``Raccoon``:
     import logging.config
 
     from raccoon import Publisher
-
-    import ..settings as st
 
 
     BUS_HOST = config.get('bus', 'host')
@@ -47,8 +43,7 @@ Empezando a utilizar ``Raccoon``:
         'username' = 'James Gordon'
     }
 
-    with RpcPublisher(st.BUS_HOST, st.BUS_USER, st.BUS_PASSWORD, st.EXCHANGE_CREATE_SYMBOL,
-                      source_app=st.APP_NAME) as bus:
+    with RpcPublisher(BUS_HOST, BUS_USER, BUS_PASSWORD, EXCHANGE_CREATE_SYMBOL, source_app=APP_NAME) as bus:
         symbol_id = bus.rpc_call(data)
         print(symbol_id)
 
