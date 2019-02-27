@@ -33,7 +33,7 @@ Los módulos más importantes que componen ``raccoon`` son:
 
 
 Tabla de Contenidos
-================
+===================
 
 .. toctree::
    :maxdepth: 2
