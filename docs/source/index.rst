@@ -42,3 +42,4 @@ Tabla de Contenidos
    first_steps
    api_reference
    examples
+   changelog
