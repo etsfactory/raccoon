@@ -133,3 +133,6 @@ ENV/
 
 ### Visual Source Safe ###
 vssver2.scc
+
+# Librería gitchangelog
+changelog.rst
