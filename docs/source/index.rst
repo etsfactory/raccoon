@@ -4,8 +4,8 @@
    contain the root `toctree` directive.
 
 
-Bienvenido a la documentación de Raccoon!
-=========================================
+Bienvenido a Raccoon!
+=====================
 
 ============
 Introducción
