@@ -1,6 +1,43 @@
 Changelog
 =========
 
+
+1.6.0 (2019-03-04)
+------------------
+
+Bugs
+~~~~
+- BUG: Se utiliza el theme de ETS. [Nelson Saturno]
+
+Documentación
+~~~~~~~~~~~~~
+- DOC: Se actualiza el fichero de instalación. [Nelson Saturno]
+- DOC: Se añade el changelog. [Nelson Saturno]
+- DOC: Se autogenera el changelog.rst para la documentación. [Nelson
+  Saturno]
+- DOC: Se actualizan los whitelist_tags. [Nelson Saturno]
+- DOC: Se actualiza descripción de excepciones. [Nelson Saturno]
+
+Limpieza de Código
+~~~~~~~~~~~~~~~~~~
+- CLN: Se elimina el requirements.txt y se añaden al requirements-doc.
+  [Nelson Saturno]
+
+Other
+~~~~~
+- [ADD] Doc updated. [Rafa]
+- [ADD] Doc updated. [Rafa]
+- [ADD] Doc updated. [Rafa]
+- [ADD] sphinx versioning updated. [Rafa]
+- [ADD] Doc updated. [Rafa]
+- [ADD] Doc updated. [Rafa]
+- [ADD] Doc updated. [Rafa]
+- [ADD] Doc updated. [Rafa]
+- [ENH] New version with doc 1.6.0. [Rafa]
+- [CLN] Doc updated. [Rafa]
+- [ENH] Documentation added. [Rafa]
+
+
 1.5.1 (2019-02-08)
 ------------------
 
