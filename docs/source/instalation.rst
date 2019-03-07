@@ -5,7 +5,7 @@ Es requisito tener instalado `Python 3+ <http://www.python.org/>`_.
 
 **Usuarios de la librería**
 
-``pip install git+http://ETSGIT1/Snakes/raccoon.git@{version}#egg=raccoon``
+``pip install --index http://etspip/ets/pypi/+simple/ --trusted-host etspip raccoon=={version}``
 
 Nota: se debe sustituir ``{version}`` por la versión que se desea utilizar.
 
