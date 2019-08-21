@@ -11,7 +11,7 @@ class Publisher(object):
     """Clase encargada de publicar los mensajes de forma asíncrona"""
 
     def __init__(self, host, user, password, exchange, exchange_type='fanout', retry_wait_time=1, max_retries=1,
-                 source_app=None):
+                 source_app=None, token=None):
         self.host = host
         self.user = user
         self.password = password
@@ -20,6 +20,7 @@ class Publisher(object):
         self.retry_wait_time = retry_wait_time
         self.exchange_type = exchange_type
         self.source_app = source_app
+        self.token = token
 
     def __enter__(self):
         tries = 0
@@ -61,6 +62,8 @@ class Publisher(object):
         metadata = {'CreationDate': datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
         if self.source_app is not None:
             metadata['AppName'] = self.source_app
+        if self.token is not None:
+            metadata['token'] = self.token
         message['metadata'] = metadata
         while not finished:
             try:
@@ -79,7 +82,7 @@ class RpcPublisher(object):
     """Clase encargada de publicar los mensajes de forma síncrona"""
 
     def __init__(self, host, user, password, exchange, exchange_type='fanout', retry_wait_time=1, max_retries=1,
-                 time_limit=300, source_app=None):
+                 time_limit=300, source_app=None, token=None):
 
         self.host = host
         self.user = user
@@ -92,6 +95,7 @@ class RpcPublisher(object):
         self.time_limit = time_limit
         self.response = None
         self.corr_id = None
+        self.token = token
 
     def _on_response(self, ch, method, props, body):
         if self.corr_id == props.correlation_id:
@@ -143,6 +147,8 @@ class RpcPublisher(object):
         metadata = {'CreationDate': datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
         if self.source_app is not None:
             metadata['AppName'] = self.source_app
+        if self.token is not None:
+            metadata['token'] = self.token
         message['metadata'] = metadata
 
         self.corr_id = str(uuid.uuid4())
