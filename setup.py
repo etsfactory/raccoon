@@ -19,8 +19,7 @@ setup(
     ],
     install_requires=[
         'pika==0.12.0',
-        'ujson==1.35',
-        'numpydoc'
+        'ujson==1.35'
     ],
     zip_safe=True
 )
