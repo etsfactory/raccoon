@@ -47,17 +47,11 @@ class Consumer(threading.Thread):
         En caso de que la clase defina el atributo "prefetch_count", los mensajes se procesaran el bloque.
         En caso de error, pone un mensaje en la cola de errores.
         """
-        data = {}
         try:
             self.delivery_tags.append(method.delivery_tag)
             try:
-                message = ujson.loads(body)
-                data.update(message)
-            except Exception as e:
-                if body:
-                    data['message'] = body
-                raise e
-            finally:
+                data = ujson.loads(body)
+
                 data.setdefault('metadata', {})['exchange'] = method.exchange
                 data['metadata']['routing_key'] = method.routing_key
                 data['metadata']['delivery_tag'] = method.delivery_tag
@@ -65,6 +59,11 @@ class Consumer(threading.Thread):
                 federated = properties.headers and properties.headers.get('x-received-from')
                 if federated:
                     data['metadata']['IsFederated'] = True
+
+                error_msg = ujson.dumps(data)
+            except (ValueError, AttributeError) as e:
+                error_msg = body
+                raise e
 
             if self.data_ready():
                 if self.process_data_in_baches():
@@ -98,7 +97,7 @@ class Consumer(threading.Thread):
         except TransientException as e:
             if method.redelivered:
                 # Se notifica el error y se reencola el mensaje apropiadamente
-                self._notify_application_exception(ch, method, properties, e, data)
+                self._notify_application_exception(ch, method, properties, e, error_msg)
             for tag in self.delivery_tags[:]:
                 ch.basic_nack(delivery_tag=tag)
                 self.delivery_tags.remove(tag)
@@ -119,9 +118,9 @@ class Consumer(threading.Thread):
         except ConnectionClosed as e:
             raise e
         except Exception as e:
-            self._notify_application_exception(ch, method, properties, e, data)
+            self._notify_application_exception(ch, method, properties, e, error_msg)
 
-    def _notify_application_exception(self, ch, method, properties, exc_value, data):
+    def _notify_application_exception(self, ch, method, properties, exc_value, error_msg=None):
         """
         Notifica el error al hilo principal y rechaza el mensaje si es necesario
         """
@@ -130,8 +129,8 @@ class Consumer(threading.Thread):
             'trace': traceback.format_exc()
         }
 
-        if data:
-            exception.update({'body': data})
+        if error_msg:
+            exception.update({'body': error_msg})
         self.error_queue.put(exception)
 
         if self.reply:
