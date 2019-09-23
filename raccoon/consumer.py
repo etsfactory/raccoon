@@ -49,13 +49,22 @@ class Consumer(threading.Thread):
         """
         try:
             self.delivery_tags.append(method.delivery_tag)
-            data = ujson.loads(body)
-            federated = properties.headers and properties.headers.get('x-received-from')
-            if federated:
-                data.setdefault('metadata', {})['IsFederated'] = True
-            data.setdefault('metadata', {})['exchange'] = method.exchange
-            data.setdefault('metadata', {})['routing_key'] = method.routing_key
-            data.setdefault('metadata', {})['delivery_tag'] = method.delivery_tag
+            try:
+                data = ujson.loads(body)
+
+                data.setdefault('metadata', {})['exchange'] = method.exchange
+                data['metadata']['routing_key'] = method.routing_key
+                data['metadata']['delivery_tag'] = method.delivery_tag
+                data['metadata']['rabbit_queue'] = self.rabbit_queue_name
+                federated = properties.headers and properties.headers.get('x-received-from')
+                if federated:
+                    data['metadata']['IsFederated'] = True
+
+                error_msg = ujson.dumps(data)
+            except (ValueError, AttributeError) as e:
+                error_msg = body
+                raise e
+
             if self.data_ready():
                 if self.process_data_in_baches():
                     data_to_process = self.messages + [data]
@@ -88,7 +97,7 @@ class Consumer(threading.Thread):
         except TransientException as e:
             if method.redelivered:
                 # Se notifica el error y se reencola el mensaje apropiadamente
-                self._notify_application_exception(ch, method, properties, e, body)
+                self._notify_application_exception(ch, method, properties, e, error_msg)
             for tag in self.delivery_tags[:]:
                 ch.basic_nack(delivery_tag=tag)
                 self.delivery_tags.remove(tag)
@@ -109,9 +118,9 @@ class Consumer(threading.Thread):
         except ConnectionClosed as e:
             raise e
         except Exception as e:
-            self._notify_application_exception(ch, method, properties, e, body)
+            self._notify_application_exception(ch, method, properties, e, error_msg)
 
-    def _notify_application_exception(self, ch, method, properties, exc_value, body=None):
+    def _notify_application_exception(self, ch, method, properties, exc_value, error_msg=None):
         """
         Notifica el error al hilo principal y rechaza el mensaje si es necesario
         """
@@ -120,8 +129,8 @@ class Consumer(threading.Thread):
             'trace': traceback.format_exc()
         }
 
-        if body:
-            exception.update({'body': body})
+        if error_msg:
+            exception.update({'body': error_msg})
         self.error_queue.put(exception)
 
         if self.reply:
