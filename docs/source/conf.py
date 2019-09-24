@@ -16,7 +16,7 @@ import os
 import sys
 import re
 sys.path.insert(0, os.path.abspath('../..'))
-from version import __version__
+import versioneer
 
 
 # -- Project information -----------------------------------------------------
@@ -25,8 +25,8 @@ project = 'raccoon'
 copyright = '2019, IT ETS'
 author = 'IT ETS'
 
-version = ".".join(__version__.split(".")[:2])
-release = __version__
+version = ".".join(versioneer.get_version().split(".")[:2])
+release = versioneer.get_version()
 
 
 # -- General configuration ---------------------------------------------------
