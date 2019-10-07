@@ -1,11 +1,11 @@
 from setuptools import setup, find_packages
 
-from version import __version__
-
+import versioneer
 
 setup(
     name='raccoon',
-    version=__version__,
+    version=versioneer.get_version(),
+    cmdclass=versioneer.get_cmdclass(),
     description='Library that is a wrapper over pika, a python library that interacts with rabbitmq ',
     author='ETS',
     packages=find_packages(exclude=['tests', 'docs']),
