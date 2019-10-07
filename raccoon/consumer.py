@@ -153,8 +153,9 @@ class Consumer(threading.Thread):
         return res.method.message_count == 0
 
     def __init__(self, process_function, host, user, password, exchange, rabbit_queue_name, error_queue,
-                 auto_delete=False, prefetch_count=1, exchange_type='fanout', retry_wait_time=1, routing_key=None,
-                 dle=None, dle_queue=None, dle_routing_key=None, reply_origin=False, retries_to_error=3, heartbeat=None):
+                 prefetch_count=1, exchange_type='fanout', retry_wait_time=1, routing_key=None, dle=None,
+                 dle_queue=None, dle_routing_key=None, reply_origin=False, retries_to_error=3, heartbeat=None,
+                 auto_delete=False):
         """
         :param process_function: Funcion que procesara los datos recibidos
         :param host: Direccion del rabbit
