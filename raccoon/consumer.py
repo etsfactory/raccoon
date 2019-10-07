@@ -174,6 +174,7 @@ class Consumer(threading.Thread):
         :param reply_origin: If True, sends de result to the original queue using the reply_to prop of the request
         :param retries_to_error: Número de reintentos de conexión con rabbit antes de notificar el error
         :param heartbeat: tiempo con el que se comprueba si está viva la conexión
+        :param auto_delete: borra la cola cuando todos sus consumidores se cancelan o se desconectan
         """
         super().__init__()
 
