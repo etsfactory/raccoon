@@ -149,12 +149,13 @@ class Consumer(threading.Thread):
     def is_queue_empty(self):
         res = self.ch.queue_declare(queue=self.rabbit_queue_name,
                                     durable=True, exclusive=False,
-                                    auto_delete=False, passive=True)
+                                    auto_delete=self.auto_delete, passive=True)
         return res.method.message_count == 0
 
     def __init__(self, process_function, host, user, password, exchange, rabbit_queue_name, error_queue,
                  prefetch_count=1, exchange_type='fanout', retry_wait_time=1, routing_key=None, dle=None,
-                 dle_queue=None, dle_routing_key=None, reply_origin=False, retries_to_error=3, heartbeat=None):
+                 dle_queue=None, dle_routing_key=None, reply_origin=False, retries_to_error=3, heartbeat=None,
+                 auto_delete=False):
         """
         :param process_function: Funcion que procesara los datos recibidos
         :param host: Direccion del rabbit
@@ -173,6 +174,7 @@ class Consumer(threading.Thread):
         :param reply_origin: If True, sends de result to the original queue using the reply_to prop of the request
         :param retries_to_error: Número de reintentos de conexión con rabbit antes de notificar el error
         :param heartbeat: tiempo con el que se comprueba si está viva la conexión
+        :param auto_delete: borra la cola cuando todos sus consumidores se cancelan o se desconectan
         """
         super().__init__()
 
@@ -183,6 +185,7 @@ class Consumer(threading.Thread):
         self.exchange = exchange
         self.rabbit_queue_name = rabbit_queue_name
         self.error_queue = error_queue
+        self.auto_delete = auto_delete
         self.prefetch_count = prefetch_count
         self.exchange_type = exchange_type
         self.retry_wait_time = retry_wait_time
@@ -222,7 +225,8 @@ class Consumer(threading.Thread):
                 if self.dle:
                     # Declara el Dead letter exchange
                     channel.exchange_declare(exchange=self.dle, durable=True, exchange_type='direct')
-                    result = channel.queue_declare(queue=self.dle_queue, durable=True, arguments=queue_args)
+                    result = channel.queue_declare(queue=self.dle_queue, durable=True, auto_delete=self.auto_delete,
+                                                   arguments=queue_args)
                     tmp_queue_name = result.method.queue
                     channel.queue_bind(exchange=self.dle, queue=tmp_queue_name, routing_key=self.dle_routing_key)
                     queue_args = {'x-dead-letter-exchange': self.dle}
@@ -230,7 +234,8 @@ class Consumer(threading.Thread):
                         queue_args['x-dead-letter-routing-key'] = self.dle_routing_key
 
                 self.ch = channel
-                channel.queue_declare(queue=self.rabbit_queue_name, durable=True, arguments=queue_args)
+                channel.queue_declare(queue=self.rabbit_queue_name, durable=True, auto_delete=self.auto_delete,
+                                      arguments=queue_args)
 
                 if isinstance(self.exchange, list):
                     for bus_filter in self.exchange:
@@ -275,12 +280,12 @@ class Consumer(threading.Thread):
 
     def bind_queue(self, exchange, key, exchange_type, exchange_durable):
         self.ch.exchange_declare(exchange=exchange,
-                            exchange_type=exchange_type,
-                            durable=exchange_durable)
+                                 exchange_type=exchange_type,
+                                 durable=exchange_durable)
 
         self.ch.queue_bind(exchange=exchange,
-                                    queue=self.rabbit_queue_name,
-                                    routing_key=key)
+                           queue=self.rabbit_queue_name,
+                           routing_key=key)
 
     def stop(self):
         self._stopped = True
