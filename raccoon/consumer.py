@@ -2,6 +2,7 @@ import threading
 import time
 import traceback
 import ujson
+import socket
 
 import pika
 from pika.exceptions import ConnectionClosed
@@ -155,7 +156,7 @@ class Consumer(threading.Thread):
     def __init__(self, process_function, host, user, password, exchange, rabbit_queue_name, error_queue,
                  prefetch_count=1, exchange_type='fanout', retry_wait_time=1, routing_key=None, dle=None,
                  dle_queue=None, dle_routing_key=None, reply_origin=False, retries_to_error=3, heartbeat=None,
-                 auto_delete=False):
+                 auto_delete=False, source_app=None):
         """
         :param process_function: Funcion que procesara los datos recibidos
         :param host: Direccion del rabbit
@@ -175,6 +176,7 @@ class Consumer(threading.Thread):
         :param retries_to_error: Número de reintentos de conexión con rabbit antes de notificar el error
         :param heartbeat: tiempo con el que se comprueba si está viva la conexión
         :param auto_delete: borra la cola cuando todos sus consumidores se cancelan o se desconectan
+        :param source_app: Nombre de la aplicacion que crea el consumidor
         """
         super().__init__()
 
@@ -196,6 +198,7 @@ class Consumer(threading.Thread):
         self.reply = reply_origin
         self.retries_to_error = retries_to_error
         self.heartbeat = heartbeat
+        self.source_app = source_app
 
         self.count = 0
         self.number_of_messages = 0
@@ -216,8 +219,13 @@ class Consumer(threading.Thread):
         while not self._stopped:
             try:
                 credentials = pika.PlainCredentials(self.user, self.password)
+                try:
+                    name = socket.gethostname()
+                except:
+                    name = ''
+                conn_name = "{}:{}".format(name, self.source_app)
                 connection = pika.BlockingConnection(pika.ConnectionParameters(self.host, credentials=credentials,
-                                                                               heartbeat=self.heartbeat))
+                                                     heartbeat=self.heartbeat, client_properties={'connection_name': conn_name}))
                 channel = connection.channel()
                 self.conn = connection
 
