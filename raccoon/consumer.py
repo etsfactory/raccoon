@@ -270,9 +270,11 @@ class Consumer(threading.Thread):
             except (ConnectionClosed, ConnectionErrorException) as e:
                 # Solo publica el primer error de conexion
                 if retries == self.retries_to_error:
+                    _, _, trace = sys.exc_info()
                     exception = {
                         'error': e,
-                        'trace': traceback.format_exc()
+                        'trace': traceback.format_exc(),
+                        'python_traceback': trace,
                     }
                     self.error_queue.put(exception)
                 try:
@@ -280,9 +282,11 @@ class Consumer(threading.Thread):
                 except Exception:
                     pass
             except Exception as e:
+                _, _, trace = sys.exc_info()
                 exception = {
                     'error': e,
-                    'trace': traceback.format_exc()
+                    'trace': traceback.format_exc(),
+                    'python_traceback': trace,
                 }
                 self.error_queue.put(exception)
             finally:
