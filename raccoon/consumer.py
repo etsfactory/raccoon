@@ -3,6 +3,7 @@ import time
 import traceback
 import ujson
 import socket
+import sys
 
 import pika
 from pika.exceptions import ConnectionClosed
@@ -125,9 +126,11 @@ class Consumer(threading.Thread):
         """
         Notifica el error al hilo principal y rechaza el mensaje si es necesario
         """
+        _, _, trace = sys.exc_info()
         exception = {
             'error': exc_value,
-            'trace': traceback.format_exc()
+            'trace': traceback.format_exc(),
+            'python_traceback': trace,
         }
 
         if error_msg:
@@ -267,9 +270,11 @@ class Consumer(threading.Thread):
             except (ConnectionClosed, ConnectionErrorException) as e:
                 # Solo publica el primer error de conexion
                 if retries == self.retries_to_error:
+                    _, _, trace = sys.exc_info()
                     exception = {
                         'error': e,
-                        'trace': traceback.format_exc()
+                        'trace': traceback.format_exc(),
+                        'python_traceback': trace,
                     }
                     self.error_queue.put(exception)
                 try:
@@ -277,9 +282,11 @@ class Consumer(threading.Thread):
                 except Exception:
                     pass
             except Exception as e:
+                _, _, trace = sys.exc_info()
                 exception = {
                     'error': e,
-                    'trace': traceback.format_exc()
+                    'trace': traceback.format_exc(),
+                    'python_traceback': trace,
                 }
                 self.error_queue.put(exception)
             finally:
