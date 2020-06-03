@@ -8,9 +8,10 @@ from pika.exceptions import ConnectionClosed
 
 
 class Publisher(object):
+    """Clase encargada de publicar los mensajes de forma asíncrona"""
 
     def __init__(self, host, user, password, exchange, exchange_type='fanout', retry_wait_time=1, max_retries=1,
-                 source_app=None):
+                 source_app=None, token=None):
         self.host = host
         self.user = user
         self.password = password
@@ -19,6 +20,7 @@ class Publisher(object):
         self.retry_wait_time = retry_wait_time
         self.exchange_type = exchange_type
         self.source_app = source_app
+        self.token = token
 
     def __enter__(self):
         tries = 0
@@ -44,6 +46,14 @@ class Publisher(object):
         self.channel.close()
 
     def publish_msg(self, message, mandatory=False, routing_key=''):
+        """
+        Método público encargado de enviar  el mensaje
+
+        :param message: mensaje a enviar
+        :param mandatory: activa el modo de confirmación ACK en RabbitMQ
+        :param routing_key: la ruta a vincular
+        :return: True si la confirmación no está activada. Si está activada True si el mensaje fue entregado, si no False
+        """
         tries = 0
         finished = False
         if mandatory:
@@ -52,6 +62,8 @@ class Publisher(object):
         metadata = {'CreationDate': datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
         if self.source_app is not None:
             metadata['AppName'] = self.source_app
+        if self.token is not None:
+            metadata['token'] = self.token
         message['metadata'] = metadata
         while not finished:
             try:
@@ -67,9 +79,10 @@ class Publisher(object):
 
 
 class RpcPublisher(object):
+    """Clase encargada de publicar los mensajes de forma síncrona"""
 
     def __init__(self, host, user, password, exchange, exchange_type='fanout', retry_wait_time=1, max_retries=1,
-                 time_limit=300, source_app=None):
+                 time_limit=300, source_app=None, token=None):
 
         self.host = host
         self.user = user
@@ -82,6 +95,7 @@ class RpcPublisher(object):
         self.time_limit = time_limit
         self.response = None
         self.corr_id = None
+        self.token = token
 
     def _on_response(self, ch, method, props, body):
         if self.corr_id == props.correlation_id:
@@ -117,6 +131,14 @@ class RpcPublisher(object):
         self.channel.close()
 
     def rpc_call(self, message, mandatory=False, routing_key=''):
+        """
+        Método público encargado de enviar  el mensaje
+
+        :param message: mensaje a enviar
+        :param mandatory: activa el modo de confirmación ACK en RabbitMQ
+        :param routing_key: la ruta a vincular
+        :return: JSON con la respuesta recibida despues de enviar el mensaje
+        """
         tries = 0
         finished = False
         if mandatory:
@@ -125,6 +147,8 @@ class RpcPublisher(object):
         metadata = {'CreationDate': datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
         if self.source_app is not None:
             metadata['AppName'] = self.source_app
+        if self.token is not None:
+            metadata['token'] = self.token
         message['metadata'] = metadata
 
         self.corr_id = str(uuid.uuid4())
