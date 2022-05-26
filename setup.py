@@ -19,7 +19,7 @@ setup(
     ],
     install_requires=[
         'pika==0.12.0',
-        'ujson==1.35'
+        'ujson==5.2.0'
     ],
     zip_safe=True
 )
